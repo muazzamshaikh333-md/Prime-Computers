@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Track Your Order | Prime Computers</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Rajdhani:wght@300;400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css" />
+<style>
+  .track-wrap {
+    max-width: 520px; margin: 80px auto; padding: 0 20px;
+  }
+  .track-card {
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg);
+    padding: 36px 28px; box-shadow: var(--shadow-card); text-align: center;
+  }
+  .track-card i.fa-box-open { font-size: 2.4rem; color: var(--neon); margin-bottom: 12px; }
+  .track-card h1 { font-family: var(--font-display); font-size: 1.4rem; margin-bottom: 6px; }
+  .track-card p.sub { color: var(--white-dim); font-size: 0.9rem; margin-bottom: 24px; }
+
+  .search-row { display: flex; gap: 10px; }
+  .search-row input {
+    flex: 1; padding: 13px 16px; background: var(--bg-glass); border: 1px solid var(--border);
+    border-radius: var(--radius); color: var(--white); font-family: var(--font-body); font-size: 1rem;
+    text-transform: uppercase;
+  }
+  .search-row input:focus { outline: none; border-color: var(--neon); }
+  .search-row button {
+    padding: 0 22px; border: none; border-radius: var(--radius); cursor: pointer;
+    background: linear-gradient(90deg, var(--neon2), var(--neon)); color: #021018; font-weight: 700;
+  }
+
+  #result { margin-top: 28px; text-align: left; display: none; }
+  #result.show { display: block; }
+  .status-line { display: flex; align-items: center; gap: 10px; justify-content: center; margin-bottom: 18px; }
+  .status-pill {
+    font-family: var(--font-display); font-size: 0.95rem; padding: 8px 20px; border-radius: 30px;
+    letter-spacing: 1px;
+  }
+  .pill-Pending { background: rgba(255,203,61,0.15); color: #ffcb3d; border:1px solid rgba(255,203,61,0.4); }
+  .pill-In.Progress, .pill-InProgress { background: rgba(77,169,255,0.15); color: #4da9ff; border:1px solid rgba(77,169,255,0.4); }
+  .pill-Ready { background: rgba(0,226,154,0.15); color: #00e29a; border:1px solid rgba(0,226,154,0.4); }
+  .pill-Completed { background: rgba(0,226,154,0.25); color: #00e29a; border:1px solid rgba(0,226,154,0.4); }
+  .pill-Cancelled { background: rgba(255,85,119,0.15); color: #ff5577; border:1px solid rgba(255,85,119,0.4); }
+
+  .detail-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--white-faint); font-size: 0.92rem; }
+  .detail-row span:first-child { color: var(--white-dim); }
+
+  /* Progress steps */
+  .steps { display: flex; justify-content: space-between; margin: 24px 0; position: relative; }
+  .steps::before {
+    content: ''; position: absolute; top: 14px; left: 5%; right: 5%; height: 2px; background: var(--white-faint); z-index: 0;
+  }
+  .step { position: relative; z-index: 1; text-align: center; flex: 1; }
+  .step .dot {
+    width: 28px; height: 28px; border-radius: 50%; background: var(--bg-dark); border: 2px solid var(--white-faint);
+    margin: 0 auto 6px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: var(--white-dim);
+  }
+  .step.done .dot { border-color: var(--neon); background: var(--neon); color: #021018; }
+  .step .label { font-size: 0.68rem; color: var(--white-dim); }
+
+  .error-msg { color: #ff5577; font-size: 0.9rem; margin-top: 16px; display: none; }
+  .error-msg.show { display: block; }
+  .back-link { display:block; text-align:center; margin-top: 20px; color: var(--white-dim); font-size: 0.85rem; text-decoration:none; }
+  .back-link:hover { color: var(--neon); }
+</style>
+</head>
+<body>
+<div class="track-wrap">
+  <div class="track-card">
+    <i class="fas fa-box-open"></i>
+    <h1>Track Your Print Order</h1>
+    <p class="sub">Enter the Request ID you received after submitting your order</p>
+
+    <div class="search-row">
+      <input type="text" id="reqIdInput" placeholder="e.g. REQ-L7VWFS" />
+      <button id="trackBtn"><i class="fas fa-magnifying-glass"></i></button>
+    </div>
+    <div class="error-msg" id="errorMsg"><i class="fas fa-triangle-exclamation"></i> Request not found. Check your Request ID and try again.</div>
+
+    <div id="result">
+      <div class="status-line">
+        <span class="status-pill" id="statusPill"></span>
+      </div>
+
+      <div class="steps" id="stepsRow">
+        <div class="step" data-s="Pending"><div class="dot"><i class="fas fa-check"></i></div><div class="label">Received</div></div>
+        <div class="step" data-s="In Progress"><div class="dot"><i class="fas fa-check"></i></div><div class="label">Printing</div></div>
+        <div class="step" data-s="Ready"><div class="dot"><i class="fas fa-check"></i></div><div class="label">Ready</div></div>
+        <div class="step" data-s="Completed"><div class="dot"><i class="fas fa-check"></i></div><div class="label">Collected</div></div>
+      </div>
+
+      <div class="detail-row"><span>File</span><span id="dFile"></span></div>
+      <div class="detail-row"><span>Copies</span><span id="dCopies"></span></div>
+      <div class="detail-row"><span>Paper / Type</span><span id="dPaper"></span></div>
+      <div class="detail-row"><span>Submitted</span><span id="dTime"></span></div>
+    </div>
+  </div>
+  <a href="print-services.html" class="back-link"><i class="fas fa-arrow-left"></i> Back to Print Services</a>
+</div>
+
+<script>
+  const BACKEND_URL = 'http://localhost:5000';
+  const STEP_ORDER = ['Pending', 'In Progress', 'Ready', 'Completed'];
+
+  document.getElementById('trackBtn').addEventListener('click', track);
+  document.getElementById('reqIdInput').addEventListener('keydown', e => { if (e.key === 'Enter') track(); });
+
+  async function track() {
+    const id = document.getElementById('reqIdInput').value.trim().toUpperCase();
+    const result = document.getElementById('result');
+    const errorMsg = document.getElementById('errorMsg');
+    result.classList.remove('show');
+    errorMsg.classList.remove('show');
+    if (!id) return;
+
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/print-requests/${id}`);
+      const json = await res.json();
+      if (!json.success) {
+        errorMsg.classList.add('show');
+        return;
+      }
+      const d = json.data;
+
+      document.getElementById('statusPill').textContent = d.status;
+      document.getElementById('statusPill').className = 'status-pill pill-' + d.status.replace(' ', '');
+
+      document.getElementById('dFile').textContent = d.fileName;
+      document.getElementById('dCopies').textContent = d.copies;
+      document.getElementById('dPaper').textContent = `${d.paperSize} / ${d.printType}`;
+      document.getElementById('dTime').textContent = new Date(d.createdAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+
+      const currentIdx = d.status === 'Cancelled' ? -1 : STEP_ORDER.indexOf(d.status);
+      document.querySelectorAll('.step').forEach(stepEl => {
+        const stepIdx = STEP_ORDER.indexOf(stepEl.dataset.s);
+        stepEl.classList.toggle('done', stepIdx <= currentIdx && currentIdx !== -1);
+      });
+
+      result.classList.add('show');
+    } catch (err) {
+      errorMsg.classList.add('show');
+    }
+  }
+</script>
+</body>
+</html>
